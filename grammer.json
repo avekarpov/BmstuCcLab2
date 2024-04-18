@@ -1,0 +1,9 @@
+{
+    "nonterms": ["S", "Z", "A"],
+    "terms": ["a", "b", "q", "w", "+", "!", "p"],
+    "productions": {
+        "S": ["abZqw", "+Z!"],
+        "X": ["pA"]
+    },
+    "start_nonterm": "S"
+}
