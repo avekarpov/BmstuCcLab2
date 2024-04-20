@@ -19,6 +19,61 @@ class Grammer:
 
         return self
     
+    def remove_left_recursion(self):
+        new_nonterms = set()
+        new_productions = {}
+
+        for i, nonterm in enumerate(reversed(sorted(self._nonterms))):
+            new_nonterms.add(nonterm)
+            new_productions.update({nonterm: self._productions[nonterm]})
+
+            for j, prev_nonterm in enumerate(reversed(sorted(self._nonterms))):
+                if j == i:
+                    break
+                
+                nonterm_productions_closure = []
+                for nonterm_productions in self._productions[nonterm]:
+                    match = re.match(f'{prev_nonterm}(.*)', nonterm_productions)
+                    if match is not None:
+                        for prev_nonterm_productions in self._productions[prev_nonterm]:
+                            nonterm_productions_closure.append(f'{prev_nonterm_productions}{match.group(1)}')
+                    else:
+                        nonterm_productions_closure.append(nonterm_productions)
+
+                _, nonterm_new_productions, transit_nonterm, transit_nonterm_productions = self.remove_left_recursion_for(nonterm, nonterm_productions_closure)
+                
+                if len(transit_nonterm_productions) == 0:
+                    continue
+
+                new_nonterms.add(transit_nonterm)
+                new_productions.update({nonterm: nonterm_new_productions})
+                new_productions.update({transit_nonterm: transit_nonterm_productions})
+
+        self._nonterms = new_nonterms
+        self._productions = new_productions
+
+        return self   
+
+    def remove_left_recursion_for(self, nonterm, productions):
+        transit_nonterm = f'{nonterm}\''
+        transit_nonterm_productions = []
+
+        new_productions = []
+
+        for production in productions:
+            if production == 'ε':
+                transit_nonterm_productions.append('ε')
+                new_productions.append(transit_nonterm)
+                continue
+
+            match = re.match(f'{nonterm}(.*)', production)
+            if match is not None:
+                transit_nonterm_productions.append(f'{match.group(1)}{transit_nonterm}')
+            else:
+                new_productions.append(f'{production}{transit_nonterm}')
+
+        return nonterm, new_productions, transit_nonterm, transit_nonterm_productions
+
     def remove_unreachables(self):
         vs = [set(self._start_nonterm)]
 
@@ -51,13 +106,17 @@ class Grammer:
         return self
 
     def __str__(self):
-        return f'nonterms: {self._nonterms}, terms: {self._terms}, productions: {self._productions}, start_nonterm: {self._start_nonterm}'
+        return f'nonterms: {self._nonterms}\nterms: {self._terms}\nproductions: {self._productions}\nstart_nonterm: {self._start_nonterm}'
 
 def main():
     file_path = 'grammer.json'
     # file_path = input()
 
-    grammer = Grammer().by_json(file_path).remove_unreachables()
+    grammer = Grammer().by_json(file_path)
+    print(grammer, end='\n\n')
+    grammer.remove_left_recursion()
+    print(grammer, end='\n\n')
+    grammer.remove_unreachables()
     print(grammer)
 
 if __name__ == '__main__':

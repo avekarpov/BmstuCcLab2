@@ -1,9 +1,10 @@
 {
-    "nonterms": ["S", "Z", "A"],
-    "terms": ["a", "b", "q", "w", "+", "!", "p"],
+    "nonterms": ["S", "A", "Z"],
+    "terms": ["a", "b", "c", "d", "ε"],
     "productions": {
-        "S": ["abZqw", "+Z!"],
-        "X": ["pA"]
+        "S": ["Aa", "b"],
+        "A": ["Ac", "Sd", "ε"],
+        "Z": ["Ad"]
     },
     "start_nonterm": "S"
 }
