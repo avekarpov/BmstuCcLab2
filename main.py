@@ -1,12 +1,14 @@
 import json
 import re
+from copy import deepcopy
 
 
 class Grammer:
-    nonterms = set()
-    terms = set()
-    start_nonterm = None
-    productions = {}
+    def __init__(self):
+        self.nonterms = set()
+        self.terms = set()
+        self.start_nonterm = None
+        self.productions = {}
 
     @staticmethod
     def from_json(file_path):
@@ -58,7 +60,7 @@ class Grammer:
 
     def removed_left_recursion(self):
         grammer = Grammer()
-        grammer.terms = self.terms
+        grammer.terms = deepcopy(self.terms)
         grammer.start_nonterm = self.start_nonterm
 
         for _, nonterm in enumerate(reversed(sorted(self.nonterms))):
@@ -81,6 +83,65 @@ class Grammer:
                 grammer.productions.update({transit_nonterm: transit_nonterm_productions})
 
         return grammer   
+
+    @staticmethod
+    def common_prefix(strings):
+        return ''.join([x[0] for x in zip(*strings) if x == (x[0], ) * len(x)])
+
+    def left_factorization(self):
+        grammer = Grammer()
+        grammer.terms = deepcopy(self.terms)
+        grammer.start_nonterm = self.start_nonterm
+
+        for nonterm in self.nonterms:
+            grammer.nonterms.add(nonterm)
+            if len(self.productions[nonterm]) < 2:
+                grammer.productions[nonterm] = deepcopy(self.productions[nonterm])
+                continue
+
+            productions = sorted(self.productions[nonterm])
+            
+            f = 0
+            t = 1
+            k = 1
+            while t < len(productions):
+                prefix = self.common_prefix(productions[f:t + 1])
+                t += 1
+
+                if prefix == '':
+                    grammer.productions.setdefault(nonterm, []).append(productions[f])
+                    f += 1
+                    continue
+
+                while t < len(productions):
+                    new_prefix = self.common_prefix(productions[f:t + 1])
+
+                    if prefix != new_prefix:
+                        new_nonterm = f'{nonterm}{k}'
+                        k += 1
+
+                        grammer.nonterms.add(new_nonterm)
+                        grammer.productions.setdefault(nonterm, []).append(f'{prefix}{new_nonterm}')
+                        for p in range(f, t):
+                            grammer.productions.setdefault(new_nonterm, []).append(productions[p][len(prefix):])
+
+                        f = t
+                        t += 1
+                        break
+
+                    t += 1
+
+            if t - f == 1:
+                grammer.productions.setdefault(nonterm, []).append(productions[-1])
+            else:
+                new_nonterm = f'{nonterm}{k}'
+
+                grammer.nonterms.add(new_nonterm)
+                grammer.productions.setdefault(nonterm, []).append(f'{prefix}{new_nonterm}')
+                for p in range(f, t):
+                    grammer.productions.setdefault(new_nonterm, []).append(productions[p][len(prefix):])
+
+        return grammer
 
     def removed_unreachables(self):
         grammer = Grammer()
@@ -117,9 +178,9 @@ class Grammer:
     def __str__(self):
         return \
             f'{{\n'\
-            f'    {{{', '.join(self.nonterms)}}},\n'\
-            f'    {{{', '.join(self.terms)}}},\n'\
-            f'    {{\n        {',\n        '.join([f'{k} -> {'|'.join(self.productions[k])}' for k in self.productions.keys()])}\n    }},\n'\
+            f'    {{{', '.join(sorted(self.nonterms))}}},\n'\
+            f'    {{{', '.join(sorted(self.terms))}}},\n'\
+            f'    {{\n        {',\n        '.join([f'{k} -> {' | '.join(self.productions[k])}' for k in sorted(self.productions.keys())])}\n    }},\n'\
             f'    {self.start_nonterm}\n'\
             f'}}'
 
@@ -128,11 +189,13 @@ def main():
     # file_path = input()
 
     grammer = Grammer.from_json(file_path)
-    print(grammer, end='\n\n')
+    print(f'input\n{grammer}', end='\n\n')
     grammer = grammer.removed_left_recursion()
-    print(grammer, end='\n\n')
+    print(f'removed recursion\n{grammer}', end='\n\n')
+    grammer = grammer.left_factorization()
+    print(f'factorization\n{grammer}', end='\n\n')
     grammer = grammer.removed_unreachables()
-    print(grammer)
+    print(f'removed unreachables\n{grammer}')
 
 if __name__ == '__main__':
     main()
