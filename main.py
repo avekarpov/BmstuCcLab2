@@ -106,7 +106,13 @@ class Grammer:
         return self
 
     def __str__(self):
-        return f'nonterms: {self._nonterms}\nterms: {self._terms}\nproductions: {self._productions}\nstart_nonterm: {self._start_nonterm}'
+        return \
+            f'{{\n'\
+            f'    {self._nonterms},\n'\
+            f'    {self._terms},\n'\
+            f'    {{\n        {',\n        '.join([f'{k} -> {'|'.join(self._productions[k])}' for k in self._productions.keys()])}\n    }},\n'\
+            f'    {self._start_nonterm}\n'\
+            f'}}'
 
 def main():
     file_path = 'grammer.json'
